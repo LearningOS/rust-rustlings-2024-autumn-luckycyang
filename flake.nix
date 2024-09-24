@@ -1,64 +1,51 @@
 {
-  description = "Small exercises to get you used to reading and writing Rust code";
+  description = "A devShell example";
 
   inputs = {
-    flake-compat = {
-      url = "github:edolstra/flake-compat";
-      flake = false;
-    };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, flake-utils, nixpkgs, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    { self
+    , nixpkgs
+    , rust-overlay
+    , flake-utils
+    , ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-
-        cargoBuildInputs = with pkgs; lib.optionals stdenv.isDarwin [
-          darwin.apple_sdk.frameworks.CoreServices
-        ];
-
-        rustlings =
-          pkgs.rustPlatform.buildRustPackage {
-            name = "rustlings";
-            version = "5.5.1";
-
-            buildInputs = cargoBuildInputs;
-
-            src = with pkgs.lib; cleanSourceWith {
-              src = self;
-              # a function that returns a bool determining if the path should be included in the cleaned source
-              filter = path: type:
-                let
-                  # filename
-                  baseName = builtins.baseNameOf (toString path);
-                  # path from root directory
-                  path' = builtins.replaceStrings [ "${self}/" ] [ "" ] path;
-                  # checks if path is in the directory
-                  inDirectory = directory: hasPrefix directory path';
-                in
-                inDirectory "src" ||
-                inDirectory "tests" ||
-                hasPrefix "Cargo" baseName ||
-                baseName == "info.toml";
-            };
-
-            cargoLock.lockFile = ./Cargo.lock;
-          };
-      in
-      {
-        devShell = pkgs.mkShell {
-          RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-
-          buildInputs = with pkgs; [
-            cargo
-            rustc
-            rust-analyzer
-            rustlings
-            rustfmt
-            clippy
-          ] ++ cargoBuildInputs;
+        overlays = [ (import rust-overlay) ];
+        pkgs = import nixpkgs {
+          inherit system overlays;
         };
-      });
+        rustpkg = pkgs.rust-bin.selectLatestNightlyWith (toolchain:
+          toolchain.default.override {
+            extensions = [ "rust-src" "rustfmt" "clippy" "rust-analyzer" ]; # rust-src for rust-analyzer
+            targets = [ "x86_64-unknown-linux-gnu" ];
+          });
+      in
+      with pkgs; {
+        devShells = {
+          default = mkShell {
+            buildInputs = [
+              openssl
+              pkg-config
+              eza
+              fd
+              rustpkg
+              # youcan also rust-bin.{stable, beta, nightly}.{lastest, "2121-01-01"...}.default
+              # where override {extensions = []; targets = [];}
+            ];
+
+            shellHook = ''
+              alias ls=eza
+              alias find=fd
+            '';
+          };
+        };
+      }
+    );
 }
