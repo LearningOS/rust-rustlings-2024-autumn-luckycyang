@@ -40,10 +40,39 @@ impl Default for Person {
 // If while parsing the age, something goes wrong, then return the default of
 // Person Otherwise, then return an instantiated Person object with the results
 
-// I AM NOT DONE
-
 impl From<&str> for Person {
     fn from(s: &str) -> Person {
+        // Step 1: If the length of the provided string is 0, return the default Person
+        if s.is_empty() {
+            return Person::default();
+        }
+
+        // Step 2: Split the given string on commas and collect into a vector
+        let parts: Vec<&str> = s.split(',').collect();
+        if parts.len() > 2 {
+            return Person::default();
+        }
+
+        // Step 3: Extract the first element and use it as the name
+        let name = parts.get(0).unwrap_or(&"").trim().to_string();
+
+        // Step 4: If the name is empty, return the default Person
+        if name.is_empty() {
+            return Person::default();
+        }
+
+        // Step 5: Attempt to parse the age from the second part
+        let age = if parts.len() > 1 {
+            match parts[1].trim().parse::<usize>() {
+                Ok(age) => age,
+                Err(_) => return Person::default(), // Return default if parsing fails
+            }
+        } else {
+            return Person::default(); // Return default if age is not provided
+        };
+
+        // Return a new Person instance with the valid name and age
+        Person { name, age }
     }
 }
 
