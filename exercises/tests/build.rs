@@ -10,12 +10,20 @@ fn main() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs(); // What's the use of this timestamp here?
-    let your_command = format!("cargo::rustc-env=TEST_FOO={}", timestamp);
-    println!("cargo:{}", your_command);
+    let your_command = format!("{}", timestamp);
+    println!("cargo:rustc-env=TEST_FOO={}", your_command);
+
+    // let timestamp = std::time::SystemTime::now()
+    //     .duration_since(std::time::UNIX_EPOCH)
+    //     .unwrap()
+    //     .as_secs();
+    // println!("cargo:rustc-env=TEST_FOO={}", timestamp);
 
     // In tests8, we should enable "pass" feature to make the
     // testcase return early. Fill in the command to tell
     // Cargo about that.
-    let your_command = "rustc-cfg=pass";
-    println!("cargo:{}", your_command);
+    let your_command = "";
+    println!("cargo:rustc-cfg=feature=\"pass\"");
+
+    // println!("cargo:{}", your_command);
 }
